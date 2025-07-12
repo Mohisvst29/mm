@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import VideoBackground from './components/VideoBackground';
 import CategoryButtons from './components/CategoryButtons';
 import MenuSection from './components/MenuSection';
 import SpecialOffers from './components/SpecialOffers';
@@ -14,13 +13,24 @@ import { useCart } from './hooks/useCart';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const { sections, items, offers, loading, error } = useSupabaseMenu();
-  const { cartItems, addToCart, removeFromCart, updateQuantity, getTotalPrice, clearCart } = useCart();
+  const { menuSections, specialOffers, loading, error } = useSupabaseMenu();
+  const {
+    cartItems,
+    isCartOpen,
+    setIsCartOpen,
+    tableNumber,
+    setTableNumber,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    getTotalPrice,
+    getTotalItems,
+    clearCart
+  } = useCart();
 
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -34,67 +44,68 @@ function App() {
     }
   };
 
-  const handleLogin = (success: boolean) => {
-    setIsAuthenticated(success);
+  const handleLogin = () => {
+    setIsAuthenticated(true);
     setIsLoginOpen(false);
-    if (success) {
-      setIsAdminOpen(true);
-    }
+    setIsAdminOpen(true);
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center">
+        <LoadingSpinner message="جاري تحميل المنيو..." />
+      </div>
+    );
   }
 
-  if (error) {
+  if (error && (!menuSections || menuSections.length === 0)) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">خطأ في تحميل البيانات</h2>
-          <p className="text-gray-600">{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center">
+        <div className="text-center bg-white/90 backdrop-blur-md rounded-2xl p-8 shadow-xl border border-amber-200/50">
+          <h2 className="text-2xl font-bold text-red-600 mb-4" dir="rtl">خطأ في تحميل البيانات</h2>
+          <p className="text-gray-600" dir="rtl">{error}</p>
         </div>
       </div>
     );
   }
 
-  // Filter items based on selected category
-  const filteredItems = selectedCategory === 'all' 
-    ? items 
-    : items.filter(item => item.section_id === selectedCategory);
-
-  // Group filtered items by section
-  const groupedItems = filteredItems.reduce((acc, item) => {
-    const sectionId = item.section_id;
-    if (!acc[sectionId]) {
-      acc[sectionId] = [];
-    }
-    acc[sectionId].push(item);
-    return acc;
-  }, {} as Record<string, typeof items>);
+  // Filter sections based on selected category
+  const filteredSections = selectedCategory === 'all' 
+    ? menuSections 
+    : menuSections.filter(section => section.id === selectedCategory);
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
-      <VideoBackground />
-      
-      <Header 
-        cartItemsCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-        onCartClick={() => setIsCartOpen(true)}
-        onAdminClick={handleAdminAccess}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 relative">
+      {/* Background Video */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+        <iframe
+          src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&modestbranding=1&loop=1&playlist=dQw4w9WgXcQ"
+          className="w-full h-full object-cover"
+          frameBorder="0"
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+        />
+      </div>
 
-      <main className="relative z-10">
+      {/* Header */}
+      <Header />
+
+      {/* Main Content */}
+      <main className="relative z-10 pt-8">
         {/* Hero Section */}
         <section className="min-h-screen flex items-center justify-center text-center text-white px-4">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-fade-in">
+            <h1 className="text-6xl font-bold mb-6 gradient-text" dir="rtl">
               مقهى موال مراكش
             </h1>
-            <p className="text-xl md:text-2xl mb-8 opacity-90">
-              تجربة قهوة استثنائية في قلب مراكش
+            <p className="text-2xl mb-8 opacity-90" dir="rtl">
+              تجربة قهوة أصيلة بنكهة مغربية في قلب المدينة المنورة
             </p>
             <button 
               onClick={() => document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth' })}
-              className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105"
+              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+              dir="rtl"
             >
               استكشف المنيو
             </button>
@@ -102,71 +113,89 @@ function App() {
         </section>
 
         {/* Special Offers */}
-        {offers && offers.length > 0 && (
-          <SpecialOffers offers={offers} onAddToCart={addToCart} />
+        {specialOffers && specialOffers.length > 0 && (
+          <section className="py-12 px-4">
+            <div className="max-w-7xl mx-auto">
+              <SpecialOffers offers={specialOffers} onAddToCart={addToCart} />
+            </div>
+          </section>
         )}
 
         {/* Menu Section */}
-        <section id="menu" className="py-20 bg-white">
-          <div className="container mx-auto px-4">
-            <h2 className="text-4xl font-bold text-center mb-12 text-gray-800">
-              منيو مقهى موال مراكش
-            </h2>
+        <section id="menu" className="py-12 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 shadow-xl border border-amber-200/50 inline-block">
+                <h2 className="text-4xl font-bold mb-4" dir="rtl" style={{ color: '#d4a574' }}>
+                  منيو مقهى موال مراكش
+                </h2>
+                <p className="text-lg text-gray-600" dir="rtl">
+                  اختر من تشكيلة واسعة من المشروبات والأطعمة الشهية
+                </p>
+              </div>
+            </div>
             
-            <CategoryButtons 
-              categories={sections}
-              selectedCategory={selectedCategory}
-              onCategorySelect={handleCategorySelect}
-            />
+            {/* Category Buttons */}
+            <div className="mb-12">
+              <CategoryButtons 
+                sections={[{ id: 'all', title: 'جميع الأقسام', icon: '🍽️', items: [] }, ...menuSections]}
+                activeSection={selectedCategory}
+                onSectionChange={handleCategorySelect}
+              />
+            </div>
 
-            <div className="mt-12 space-y-16">
-              {selectedCategory === 'all' ? (
-                // Show all sections
-                sections.map(section => {
-                  const sectionItems = items.filter(item => item.section_id === section.id);
-                  if (sectionItems.length === 0) return null;
-                  
-                  return (
-                    <MenuSection
-                      key={section.id}
-                      section={section}
-                      items={sectionItems}
-                      onAddToCart={addToCart}
-                    />
-                  );
-                })
-              ) : (
-                // Show selected category only
-                Object.entries(groupedItems).map(([sectionId, sectionItems]) => {
-                  const section = sections.find(s => s.id === sectionId);
-                  if (!section || sectionItems.length === 0) return null;
-                  
-                  return (
-                    <MenuSection
-                      key={section.id}
-                      section={section}
-                      items={sectionItems}
-                      onAddToCart={addToCart}
-                    />
-                  );
-                })
-              )}
+            {/* Menu Items */}
+            <div className="space-y-12">
+              {filteredSections.map(section => (
+                <MenuSection
+                  key={section.id}
+                  title={section.title}
+                  items={section.items}
+                  icon={section.icon}
+                  onAddToCart={addToCart}
+                />
+              ))}
             </div>
           </div>
         </section>
       </main>
 
+      {/* Footer */}
       <Footer />
 
-      {/* Cart Sidebar */}
+      {/* Floating Cart Button */}
+      {getTotalItems() > 0 && (
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="fixed bottom-4 right-4 z-30 bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-full shadow-2xl hover:shadow-xl transition-all duration-300 hover:scale-110"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🛒</span>
+            <span className="font-bold">{getTotalItems()}</span>
+          </div>
+        </button>
+      )}
+
+      {/* Admin Button */}
+      <button
+        onClick={handleAdminAccess}
+        className="fixed top-4 left-4 z-30 bg-black/50 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/70 transition-all duration-300"
+        title="لوحة التحكم"
+      >
+        ⚙️
+      </button>
+
+      {/* Cart */}
       <Cart
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
-        items={cartItems}
-        onUpdateQuantity={updateQuantity}
-        onRemoveItem={removeFromCart}
-        onClearCart={clearCart}
-        totalPrice={getTotalPrice()}
+        cartItems={cartItems}
+        tableNumber={tableNumber}
+        setTableNumber={setTableNumber}
+        updateQuantity={updateQuantity}
+        removeFromCart={removeFromCart}
+        getTotalPrice={getTotalPrice}
+        clearCart={clearCart}
       />
 
       {/* Admin Panel */}
@@ -175,13 +204,11 @@ function App() {
       )}
 
       {/* Login Modal */}
-      {isLoginOpen && (
-        <LoginModal
-          isOpen={isLoginOpen}
-          onClose={() => setIsLoginOpen(false)}
-          onLogin={handleLogin}
-        />
-      )}
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLogin={handleLogin}
+      />
     </div>
   );
 }

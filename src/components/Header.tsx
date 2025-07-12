@@ -1,41 +1,83 @@
-import React from 'react';
-import { MapPin, Clock, Phone } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
 
-const Header: React.FC = () => {
-  return (
-    <header className="bg-white/90 backdrop-blur-md py-8 px-4 relative z-20 shadow-lg">
-      <div className="max-w-4xl mx-auto text-center">
-        <div className="mb-6">
-          <img 
-            src="/mar.png" 
-            alt="موال مراكش" 
-            className="h-40 mx-auto mb-4 drop-shadow-lg"
-          />
-          <h1 className="text-4xl font-bold mb-2" dir="rtl" style={{ color: '#87512f' }}>
-            مقهى موال مراكش
-          </h1>
-          <p className="text-lg" dir="rtl" style={{ color: '#b8956f' }}>
-            تجربة قهوة أصيلة بنكهة مغربية
-          </p>
-        </div>
-        
-        <div className="flex flex-wrap justify-center gap-6 text-sm" style={{ color: '#b8956f' }}>
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            <span dir="rtl">المدينة المنورة - حي النبلاء</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            <span dir="rtl">مفتوح 24 ساعة</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Phone className="w-4 h-4" />
-            <span>+966567833138</span>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-};
+// التحقق من وجود متغيرات البيئة
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export default Header;
+// إنشاء عميل Supabase مع معالجة الأخطاء
+let supabase: any = null;
+
+try {
+  if (supabaseUrl && supabaseAnonKey && 
+      supabaseUrl !== 'your_supabase_url_here' && 
+      supabaseAnonKey !== 'your_supabase_anon_key_here') {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('✅ Supabase client created successfully');
+  } else {
+    console.warn('⚠️ Supabase environment variables not configured properly');
+    console.log('Using fallback mode');
+  }
+} catch (error) {
+  console.warn('❌ Failed to create Supabase client:', error);
+}
+
+// إنشاء كائن وهمي للتعامل مع الأخطاء إذا لم يكن Supabase متاحاً
+if (!supabase) {
+  supabase = {
+    from: (table: string) => ({
+      order: function(column: string, options?: any) { return this; },
+      limit: function(count: number) { return this; },
+      single: function() { return this; }
+    })
+  };
+}
+
+export { supabase };
+
+// Types for database tables
+export interface MenuSection {
+  id: string | number;
+  title: string;
+  icon: string;
+  image?: string;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MenuItem {
+  id: string | number;
+  section_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image?: string;
+  popular: boolean;
+  new: boolean;
+  available: boolean;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+  sizes?: MenuItemSize[];
+}
+
+export interface MenuItemSize {
+  id: string;
+  item_id: string;
+  size: string;
+  price: number;
+  created_at: string;
+}
+
+export interface SpecialOffer {
+  id: string;
+  title: string;
+  description: string;
+  original_price: number;
+  offer_price: number;
+  valid_until: string;
+  image?: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
