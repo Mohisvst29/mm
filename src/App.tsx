@@ -1,124 +1,83 @@
-import React, { useState } from 'react';
-import Header from './components/Header';
-import VideoBackground from './components/VideoBackground';
-import CategoryButtons from './components/CategoryButtons';
-import MenuSection from './components/MenuSection';
-import SpecialOffers from './components/SpecialOffers';
-import Cart from './components/Cart';
-import Footer from './components/Footer';
-import AdminPanel from './components/AdminPanel';
-import LoginModal from './components/LoginModal';
-import LoadingSpinner from './components/LoadingSpinner';
-import { useSupabaseMenu } from './hooks/useSupabaseMenu';
-import { useCart } from './hooks/useCart';
+import { createClient } from '@supabase/supabase-js';
 
-function App() {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [showCart, setShowCart] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+// التحقق من وجود متغيرات البيئة
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  const { sections, items, offers, loading, error } = useSupabaseMenu();
-  const { cartItems, addToCart, removeFromCart, updateQuantity, getTotalPrice, getTotalItems } = useCart();
+// إنشاء عميل Supabase مع معالجة الأخطاء
+let supabase: any = null;
 
-  const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-  };
-
-  const handleAdminAccess = () => {
-    if (isAuthenticated) {
-      setShowAdmin(true);
-    } else {
-      setShowLogin(true);
-    }
-  };
-
-  const handleLogin = (success: boolean) => {
-    setShowLogin(false);
-    if (success) {
-      setIsAuthenticated(true);
-      setShowAdmin(true);
-    }
-  };
-
-  const filteredSections = selectedCategory === 'all' 
-    ? sections 
-    : sections.filter(section => section.id === selectedCategory);
-
-  if (loading) {
-    return <LoadingSpinner />;
+try {
+  if (supabaseUrl && supabaseAnonKey && 
+      supabaseUrl !== 'your_supabase_url_here' && 
+      supabaseAnonKey !== 'your_supabase_anon_key_here') {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('✅ Supabase client created successfully');
+  } else {
+    console.warn('⚠️ Supabase environment variables not configured properly');
+    console.log('Using fallback mode');
   }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">خطأ في تحميل البيانات</h2>
-          <p className="text-gray-600">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (showAdmin) {
-    return <AdminPanel onClose={() => setShowAdmin(false)} />;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header 
-        cartItemsCount={getTotalItems()} 
-        onCartClick={() => setShowCart(true)}
-        onAdminClick={handleAdminAccess}
-      />
-      
-      <VideoBackground />
-      
-      <main className="relative z-10">
-        <SpecialOffers offers={offers} onAddToCart={addToCart} />
-        
-        <CategoryButtons 
-          categories={sections}
-          selectedCategory={selectedCategory}
-          onCategorySelect={handleCategorySelect}
-        />
-        
-        <div className="container mx-auto px-4 py-8">
-          {filteredSections.map((section) => {
-            const sectionItems = items.filter(item => item.section_id === section.id);
-            return (
-              <MenuSection
-                key={section.id}
-                section={section}
-                items={sectionItems}
-                onAddToCart={addToCart}
-              />
-            );
-          })}
-        </div>
-      </main>
-
-      <Footer />
-
-      {showCart && (
-        <Cart
-          items={cartItems}
-          onClose={() => setShowCart(false)}
-          onUpdateQuantity={updateQuantity}
-          onRemoveItem={removeFromCart}
-          totalPrice={getTotalPrice()}
-        />
-      )}
-
-      {showLogin && (
-        <LoginModal
-          onClose={() => setShowLogin(false)}
-          onLogin={handleLogin}
-        />
-      )}
-    </div>
-  );
+} catch (error) {
+  console.warn('❌ Failed to create Supabase client:', error);
 }
 
-export default App;
+// إنشاء كائن وهمي للتعامل مع الأخطاء إذا لم يكن Supabase متاحاً
+if (!supabase) {
+  supabase = {
+    from: (table: string) => ({
+      order: function(column: string, options?: any) { return this; },
+      limit: function(count: number) { return this; },
+      single: function() { return this; }
+    })
+  };
+}
+
+export { supabase };
+
+// Types for database tables
+export interface MenuSection {
+  id: string | number;
+  title: string;
+  icon: string;
+  image?: string;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MenuItem {
+  id: string | number;
+  section_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image?: string;
+  popular: boolean;
+  new: boolean;
+  available: boolean;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+  sizes?: MenuItemSize[];
+}
+
+export interface MenuItemSize {
+  id: string;
+  item_id: string;
+  size: string;
+  price: number;
+  created_at: string;
+}
+
+export interface SpecialOffer {
+  id: string;
+  title: string;
+  description: string;
+  original_price: number;
+  offer_price: number;
+  valid_until: string;
+  image?: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
